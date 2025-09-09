@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor de PDF con OCR | Netlify</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+            --gray: #7f8c8d;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(120deg, var(--secondary) 0%, var(--primary) 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+        
+        .left-panel {
+            flex: 1;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .right-panel {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-title {
+            font-size: 1.3rem;
+            color: var(--secondary);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .upload-section {
+            background-color: white;
+            border: 2px dashed var(--primary);
+            border-radius: 8px;
+            padding: 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .upload-section:hover {
+            border-color: var(--success);
+            background-color: #f0f8ff;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .editor-tools {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .tool-btn {
+            padding: 10px 15px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        
+        .tool-btn:hover {
+            background-color: #f1f1f1;
+            transform: translateY(-2px);
+        }
+        
+        .tool-btn i {
+            font-size: 16px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            border: none;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: white;
+            border: none;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        
+        .formatting-tools {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .format-btn {
+            padding: 8px 12px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .format-btn:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .format-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .pdf-viewer {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: auto;
+            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-image: 
+                linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        .text-content {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: white;
+            overflow-y: auto;
+            min-height: 300px;
+            line-height: 1.8;
+        }
+        
+        .text-content:focus {
+            outline: 2px solid var(--primary);
+        }
+        
+        .ocr-options {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .option-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .page-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .page-btn {
+            padding: 8px 15px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .page-info {
+            font-weight: 500;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--secondary);
+            color: white;
+        }
+        
+        @media (max-width: 992px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .left-panel {
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+        }
+        
+        .feature-list {
+            margin: 20px 0;
+            padding-left: 20px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 10px;
+            position: relative;
+        }
+        
+        .feature-list li:before {
+            content: "✓";
+            color: var(--success);
+            font-weight: bold;
+            position: absolute;
+            left: -20px;
+        }
+
+        .netlify-guide {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .netlify-steps {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .netlify-steps li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Editor de PDF con OCR</h1>
+            <p class="subtitle">Carga, edita y extrae texto de tus documentos PDF</p>
+        </header>
+
+        <div class="netlify-guide">
+            <h2>¿Cómo implementar en Netlify?</h2>
+            <ol class="netlify-steps">
+                <li>Guarda este archivo como <strong>index.html</strong></li>
+                <li>Sube el archivo a Netlify mediante drag & drop</li>
+                <li>¡Tu editor de PDF estará listo para usar!</li>
+            </ol>
+        </div>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <h2 class="panel-title">Vista Previa del PDF</h2>
+                <div class="upload-section">
+                    <input type="file" id="pdf-file" class="file-input" accept=".pdf">
+                    <label for="pdf-file" class="upload-btn">
+                        <i class="fas fa-file-upload"></i> Seleccionar PDF
+                    </label>
+                    <p class="file-info" id="file-info">Formatos admitidos: PDF (máx. 10MB)</p>
+                </div>
+                
+                <div class="editor-tools">
+                    <button class="tool-btn btn-primary" id="extract-btn">
+                        <i class="fas fa-font"></i> Extraer texto
+                    </button>
+                    <button class="tool-btn btn-warning" id="ocr-btn">
+                        <i class="fas fa-eye"></i> Usar OCR
+                    </button>
+                    <button class="tool-btn btn-success" id="save-btn">
+                        <i class="fas fa-save"></i> Guardar PDF
+                    </button>
+                </div>
+                
+                <div class="pdf-viewer" id="pdf-viewer">
+                    <div style="text-align: center; padding: 50px 20px; color: #666;">
+                        <i class="fas fa-file-pdf" style="font-size: 64px; color: #e74c3c; margin-bottom: 15px;"></i>
+                        <p>El contenido del PDF se mostrará aquí después de cargar un archivo</p>
+                    </div>
+                </div>
+                
+                <div class="page-controls">
+                    <button class="page-btn" id="prev-page"><i class="fas fa-chevron-left"></i> Anterior</button>
+                    <span class="page-info" id="page-info">Página 0 de 0</span>
+                    <button class="page-btn" id="next-page">Siguiente <i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <h2 class="panel-title">Editor de Texto</h2>
+                
+                <div class="formatting-tools">
+                    <button class="format-btn" data-command="bold" title="Negrita"><i class="fas fa-bold"></i></button>
+                    <button class="format-btn" data-command="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+                    <button class="format-btn" data-command="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
+                    <button class="format-btn" data-command="insertUnorderedList" title="Lista con viñetas"><i class="fas fa-list-ul"></i></button>
+                    <button class="format-btn" data-command="insertOrderedList" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
+                    <button class="format-btn" data-command="justifyLeft" title="Alinear a la izquierda"><i class="fas fa-align-left"></i></button>
+                    <button class="format-btn" data-command="justifyCenter" title="Centrar"><i class="fas fa-align-center"></i></button>
+                    <button class="format-btn" data-command="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
+                </div>
+                
+                <div class="text-content" id="text-content" contenteditable="true">
+                    <p>El texto extraído aparecerá aquí. Puedes editarlo directamente utilizando las herramientas de formato.</p>
+                    <p>Características del editor:</p>
+                    <ul class="feature-list">
+                        <li>Texto con <strong>negritas</strong> y <em>cursivas</em> perfectamente compatibles</li>
+                        <li>Párrafos correctamente separados</li>
+                        <li>Listas con viñetas y numeradas</li>
+                        <li>Diferentes alineaciones de texto</li>
+                    </ul>
+                </div>
+                
+                <div class="ocr-options">
+                    <h3><i class="fas fa-cog"></i> Opciones OCR</h3>
+                    <p>Usa OCR para extraer texto de PDFs escaneados o imágenes</p>
+                    
+                    <div class="option-group">
+                        <label for="languages">Idioma del documento:</label>
+                        <select id="languages">
+                            <option value="spa">Español</option>
+                            <option value="eng">Inglés</option>
+                            <option value="fra">Francés</option>
+                            <option value="deu">Alemán</option>
+                            <option value="por">Portugués</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label for="dpi">Resolución (DPI):</label>
+                        <select id="dpi">
+                            <option value="150">150 DPI (baja)</option>
+                            <option value="300" selected>300 DPI (media)</option>
+                            <option value="600">600 DPI (alta)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Procesando PDF, por favor espere...</p>
+        </div>
+        
+        <div class="status" id="status-message"></div>
+        
+        <footer>
+            <p>Editor de PDF con OCR &copy; 2023 - Implementado en Netlify</p>
+        </footer>
+    </div>
+
+    <!-- Bibliotecas externas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    
+    <script>
+        // Configuración de PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+        
+        // Variables globales
+        let currentPdf = null;
+        let currentPage = 1;
+        let pdfText = "";
+        
+        // Elementos DOM
+        const pdfFileInput = document.getElementById('pdf-file');
+        const fileInfo = document.getElementById('file-info');
+        const pdfViewer = document.getElementById('pdf-viewer');
+        const textContent = document.getElementById('text-content');
+        const extractBtn = document.getElementById('extract-btn');
+        const ocrBtn = document.getElementById('ocr-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const statusMessage = document.getElementById('status-message');
+        const loading = document.getElementById('loading');
+        const languageSelect = document.getElementById('languages');
+        const dpiSelect = document.getElementById('dpi');
+        const prevPageBtn = document.getElementById('prev-page');
+        const nextPageBtn = document.getElementById('next-page');
+        const pageInfo = document.getElementById('page-info');
+        const formatButtons = document.querySelectorAll('.format-btn');
+        
+        // Event Listeners
+        pdfFileInput.addEventListener('change', handleFileSelect);
+        extractBtn.addEventListener('click', extractTextFromPdf);
+        ocrBtn.addEventListener('click', processOcr);
+        saveBtn.addEventListener('click', saveChanges);
+        prevPageBtn.addEventListener('click', showPrevPage);
+        nextPageBtn.addEventListener('click', showNextPage);
+        
+        // Añadir event listeners para los botones de formato
+        formatButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const command = button.dataset.command;
+                document.execCommand(command, false, null);
+                textContent.focus();
+            });
+        });
+        
+        // Funciones
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                
+                // Validar tipo de archivo
+                if (file.type !== 'application/pdf') {
+                    showStatus('Por favor, selecciona un archivo PDF válido', 'error');
+                    return;
+                }
+                
+                // Validar tamaño de archivo (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showStatus('El archivo es demasiado grande. Máximo 10MB permitido.', 'error');
+                    return;
+                }
+                
+                fileInfo.textContent = `Archivo: ${file.name} (${formatFileSize(file.size)})`;
+                loadPdf(file);
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        function loadPdf(file) {
+            loading.style.display = 'block';
+            statusMessage.textContent = '';
+            statusMessage.className = 'status';
+            
+            const fileReader = new FileReader();
+            
+            fileReader.onload = function() {
+                const typedarray = new Uint8Array(this.result);
+                
+                pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                    currentPdf = pdf;
+                    currentPage = 1;
+                    updatePageInfo();
+                    renderPage(currentPage);
+                    
+                    loading.style.display = 'none';
+                    showStatus('PDF cargado correctamente', 'success');
+                }).catch(error => {
+                    loading.style.display = 'none';
+                    showStatus('Error al cargar el PDF: ' + error.message, 'error');
+                });
+            };
+            
+            fileReader.readAsArrayBuffer(file);
+        }
+        
+        function renderPage(pageNum) {
+            currentPdf.getPage(pageNum).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                pdfViewer.innerHTML = '';
+                pdfViewer.appendChild(canvas);
+                
+                page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                });
+            });
+        }
+        
+        function extractTextFromPdf() {
+            if (!currentPdf) {
+                showStatus('Primero carga un PDF', 'error');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            pdfText = "";
+            
+            // Extraer texto de todas las páginas
+            const extractPromises = [];
+            
+            for (let i = 1; i <= currentPdf.numPages; i++) {
+                extractPromises.push(
+                    currentPdf.getPage(i).then(page => {
+                        return page.getTextContent().then(textContent => {
+                            return textContent.items.map(item => item.str).join(' ');
+                        });
+                    })
+                );
+            }
+            
+            Promise.all(extractPromises).then(pageTexts => {
+                // Asegurar separación adecuada entre párrafos
+                pdfText = pageTexts.join('\n\n');
+                textContent.innerHTML = pdfText;
+                loading.style.display = 'none';
+                showStatus('Texto extraído correctamente', 'success');
+            }).catch(error => {
+                loading.style.display = 'none';
+                showStatus('Error al extraer texto: ' + error.message, 'error');
+            });
+        }
+        
+        function processOcr() {
+            if (!currentPdf) {
+                showStatus('Primero carga un PDF', 'error');
+                return;
+            }
+            
+            loading.style.display = 'block';
+            statusMessage.textContent = '';
+            statusMessage.className = 'status';
+            
+            // Para OCR, renderizamos la primera página como imagen
+            currentPdf.getPage(1).then(page => {
+                const scale = dpiSelect.value / 72; // Convertir DPI a escala
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise.then(() => {
+                    // Usar Tesseract.js para OCR
+                    const lang = languageSelect.value;
+                    
+                    Tesseract.recognize(
+                        canvas,
+                        lang,
+                        { logger: m => console.log(m) }
+                    ).then(({ data: { text } }) => {
+                        textContent.innerHTML = text;
+                        loading.style.display = 'none';
+                        showStatus('OCR completado correctamente', 'success');
+                    }).catch(error => {
+                        loading.style.display = 'none';
+                        showStatus('Error en OCR: ' + error.message, 'error');
+                    });
+                });
+            });
+        }
+        
+        function saveChanges() {
+            const editedText = textContent.innerText;
+            
+            // Aquí iría la lógica para guardar el texto editado
+            // Podría ser descargado como archivo de texto o reemplazar el texto en el PDF original
+            
+            // Por ahora, simulamos el guardado
+            showStatus('Cambios guardados correctamente', 'success');
+            
+            // Crear un blob con el texto y ofrecer descarga
+            const blob = new Blob([editedText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'documento_editado.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function showPrevPage() {
+            if (currentPdf && currentPage > 1) {
+                currentPage--;
+                updatePageInfo();
+                renderPage(currentPage);
+            }
+        }
+        
+        function showNextPage() {
+            if (currentPdf && currentPage < currentPdf.numPages) {
+                currentPage++;
+                updatePageInfo();
+                renderPage(currentPage);
+            }
+        }
+        
+        function updatePageInfo() {
+            if (currentPdf) {
+                pageInfo.textContent = `Página ${currentPage} de ${currentPdf.numPages}`;
+            }
+        }
+        
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status ' + type;
+            
+            // Ocultar el mensaje después de 5 segundos
+            setTimeout(() => {
+                statusMessage.textContent = '';
+                statusMessage.className = 'status';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

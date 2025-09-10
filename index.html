@@ -1,10 +1,12 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF con OCR | Netlify</title>
+    <title>Editor de PDF con OCR | Guardado Real como PDF</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #3498db;
@@ -373,21 +375,30 @@
             left: -20px;
         }
 
-        .netlify-guide {
+        .save-options {
             background-color: #f8f9fa;
             border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
         }
         
-        .netlify-steps {
-            margin: 15px 0;
-            padding-left: 20px;
-        }
-        
-        .netlify-steps li {
+        .save-options h3 {
             margin-bottom: 10px;
+            color: var(--secondary);
+        }
+        
+        .save-options label {
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        .save-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -395,17 +406,8 @@
     <div class="container">
         <header>
             <h1>Editor de PDF con OCR</h1>
-            <p class="subtitle">Carga, edita y extrae texto de tus documentos PDF</p>
+            <p class="subtitle">Carga, edita y guarda como PDF real</p>
         </header>
-
-        <div class="netlify-guide">
-            <h2>¿Cómo implementar en Netlify?</h2>
-            <ol class="netlify-steps">
-                <li>Guarda este archivo como <strong>index.html</strong></li>
-                <li>Sube el archivo a Netlify mediante drag & drop</li>
-                <li>¡Tu editor de PDF estará listo para usar!</li>
-            </ol>
-        </div>
         
         <div class="main-content">
             <div class="left-panel">
@@ -426,7 +428,7 @@
                         <i class="fas fa-eye"></i> Usar OCR
                     </button>
                     <button class="tool-btn btn-success" id="save-btn">
-                        <i class="fas fa-save"></i> Guardar PDF
+                        <i class="fas fa-save"></i> Guardar como PDF
                     </button>
                 </div>
                 
@@ -466,7 +468,28 @@
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
+                        <li><strong>Ahora con guardado real como PDF</strong></li>
                     </ul>
+                </div>
+                
+                <div class="save-options">
+                    <h3><i class="fas fa-cog"></i> Opciones de Guardado</h3>
+                    <input type="text" id="pdf-filename" class="save-input" placeholder="Nombre del archivo (sin extensión)" value="documento_editado">
+                    <div class="option-group">
+                        <label for="pdf-format">Formato de página:</label>
+                        <select id="pdf-format">
+                            <option value="a4">A4</option>
+                            <option value="letter">Carta</option>
+                            <option value="legal">Legal</option>
+                        </select>
+                    </div>
+                    <div class="option-group">
+                        <label for="pdf-orientation">Orientación:</label>
+                        <select id="pdf-orientation">
+                            <option value="portrait">Vertical</option>
+                            <option value="landscape">Horizontal</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="ocr-options">
@@ -483,15 +506,6 @@
                             <option value="por">Portugués</option>
                         </select>
                     </div>
-                    
-                    <div class="option-group">
-                        <label for="dpi">Resolución (DPI):</label>
-                        <select id="dpi">
-                            <option value="150">150 DPI (baja)</option>
-                            <option value="300" selected>300 DPI (media)</option>
-                            <option value="600">600 DPI (alta)</option>
-                        </select>
-                    </div>
                 </div>
             </div>
         </div>
@@ -504,7 +518,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con OCR &copy; 2023 - Implementado en Netlify</p>
+            <p>Editor de PDF con OCR &copy; 2023 - Ahora con guardado real como PDF</p>
         </footer>
     </div>
 
@@ -515,6 +529,9 @@
     <script>
         // Configuración de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+        
+        // Inicializar jsPDF
+        const { jsPDF } = window.jspdf;
         
         // Variables globales
         let currentPdf = null;
@@ -532,17 +549,19 @@
         const statusMessage = document.getElementById('status-message');
         const loading = document.getElementById('loading');
         const languageSelect = document.getElementById('languages');
-        const dpiSelect = document.getElementById('dpi');
         const prevPageBtn = document.getElementById('prev-page');
         const nextPageBtn = document.getElementById('next-page');
         const pageInfo = document.getElementById('page-info');
         const formatButtons = document.querySelectorAll('.format-btn');
+        const pdfFilename = document.getElementById('pdf-filename');
+        const pdfFormat = document.getElementById('pdf-format');
+        const pdfOrientation = document.getElementById('pdf-orientation');
         
         // Event Listeners
         pdfFileInput.addEventListener('change', handleFileSelect);
         extractBtn.addEventListener('click', extractTextFromPdf);
         ocrBtn.addEventListener('click', processOcr);
-        saveBtn.addEventListener('click', saveChanges);
+        saveBtn.addEventListener('click', saveAsPdf);
         prevPageBtn.addEventListener('click', showPrevPage);
         nextPageBtn.addEventListener('click', showNextPage);
         
@@ -674,7 +693,7 @@
             
             // Para OCR, renderizamos la primera página como imagen
             currentPdf.getPage(1).then(page => {
-                const scale = dpiSelect.value / 72; // Convertir DPI a escala
+                const scale = 2.0;
                 const viewport = page.getViewport({ scale: scale });
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
@@ -704,25 +723,52 @@
             });
         }
         
-        function saveChanges() {
-            const editedText = textContent.innerText;
+        function saveAsPdf() {
+            const filename = pdfFilename.value || 'documento_editado';
+            const format = pdfFormat.value;
+            const orientation = pdfOrientation.value;
             
-            // Aquí iría la lógica para guardar el texto editado
-            // Podría ser descargado como archivo de texto o reemplazar el texto en el PDF original
+            loading.style.display = 'block';
             
-            // Por ahora, simulamos el guardado
-            showStatus('Cambios guardados correctamente', 'success');
+            // Crear un nuevo documento PDF
+            const doc = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: format
+            });
             
-            // Crear un blob con el texto y ofrecer descarga
-            const blob = new Blob([editedText], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'documento_editado.txt';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            // Dividir el texto en líneas que quepan en el PDF
+            const text = textContent.innerText;
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const maxWidth = pageWidth - (margin * 2);
+            
+            // Configurar fuente y tamaño
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            
+            // Dividir el texto en líneas
+            const lines = doc.splitTextToSize(text, maxWidth);
+            
+            let y = margin;
+            const lineHeight = 7;
+            
+            // Agregar texto al PDF
+            for (let i = 0; i < lines.length; i++) {
+                if (y > doc.internal.pageSize.getHeight() - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+                
+                doc.text(lines[i], margin, y);
+                y += lineHeight;
+            }
+            
+            // Guardar el PDF
+            doc.save(filename + '.pdf');
+            
+            loading.style.display = 'none';
+            showStatus('PDF guardado correctamente', 'success');
         }
         
         function showPrevPage() {

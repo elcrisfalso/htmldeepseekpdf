@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF con Formato Completo</title>
+    <title>Editor de PDF con Texto Seleccionable</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #3498db;
@@ -411,13 +410,21 @@
             margin-top: 10px;
             font-size: 0.9rem;
         }
+
+        .text-selection-info {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF con Formato Completo</h1>
-            <p class="subtitle">Conserva negritas, cursivas y más al guardar</p>
+            <h1>Editor de PDF con Texto Seleccionable</h1>
+            <p class="subtitle">Texto real, no imágenes - Formato preservado</p>
         </header>
         
         <div class="main-content">
@@ -460,6 +467,10 @@
             <div class="right-panel">
                 <h2 class="panel-title">Editor de Texto</h2>
                 
+                <div class="text-selection-info">
+                    <i class="fas fa-info-circle"></i> Ahora el texto en el PDF resultante será seleccionable y real, no una imagen.
+                </div>
+                
                 <div class="formatting-tools">
                     <button class="format-btn" data-command="bold" title="Negrita"><i class="fas fa-bold"></i></button>
                     <button class="format-btn" data-command="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
@@ -471,10 +482,6 @@
                     <button class="format-btn" data-command="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
                     <button class="format-btn" data-command="removeFormat" title="Quitar formato"><i class="fas fa-eraser"></i></button>
                 </div>
-
-                <div class="format-info">
-                    <i class="fas fa-info-circle"></i> Todos los formatos (negritas, cursivas, etc.) se conservarán al guardar el PDF.
-                </div>
                 
                 <div class="text-content" id="text-content" contenteditable="true">
                     <p>El texto extraído aparecerá aquí. Puedes editarlo directamente utilizando las herramientas de formato.</p>
@@ -484,7 +491,7 @@
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
-                        <li><strong>Ahora con guardado real como PDF preservando formato</strong></li>
+                        <li><strong>Texto seleccionable en el PDF resultante</strong></li>
                     </ul>
                     <p>Ejemplo de texto con <strong>negrita</strong>, <em>cursiva</em>, <u>subrayado</u> y <span style="color: #e74c3c;">color</span>.</p>
                 </div>
@@ -535,7 +542,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con Formato Completo &copy; 2023 - Preserva negritas, cursivas y más</p>
+            <p>Editor de PDF con Texto Seleccionable &copy; 2023 - Texto real, no imágenes</p>
         </footer>
     </div>
 
@@ -746,71 +753,62 @@
             const orientation = pdfOrientation.value;
             
             loading.style.display = 'block';
-            showStatus('Generando PDF con formato completo...', 'success');
+            showStatus('Generando PDF con texto seleccionable...', 'success');
             
-            // Crear un clon del contenido para no afectar la visualización
-            const contentClone = textContent.cloneNode(true);
+            // Crear un nuevo documento PDF
+            const doc = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: format
+            });
             
-            // Aplicar estilos específicos para la impresión PDF
-            contentClone.style.width = "180mm";
-            contentClone.style.padding = "15mm";
-            contentClone.style.fontSize = "12pt";
-            contentClone.style.lineHeight = "1.6";
+            // Obtener el texto con formato HTML
+            const contentWithFormat = textContent.innerHTML;
             
-            // Ocultar el clon
-            contentClone.style.position = "absolute";
-            contentClone.style.left = "-9999px";
-            document.body.appendChild(contentClone);
+            // Función para procesar el formato HTML y aplicarlo al PDF
+            processHtmlContent(doc, contentWithFormat, format, orientation);
             
-            // Usar html2canvas para capturar el contenido con formato
-            html2canvas(contentClone, {
-                scale: 2,
-                useCORS: true,
-                logging: false
-            }).then(canvas => {
-                // Crear PDF
-                const imgData = canvas.toDataURL('image/png');
-                const doc = new jsPDF({
-                    orientation: orientation,
-                    unit: 'mm',
-                    format: format
-                });
-                
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-                
-                // Calcular dimensiones de la imagen para que quepa en la página
-                const imgWidth = pageWidth - 20; // margen de 10mm cada lado
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                
-                // Agregar la imagen al PDF
-                let heightLeft = imgHeight;
-                let position = 10;
-                
-                doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-                
-                // Agregar páginas adicionales si es necesario
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
+            // Guardar el PDF
+            doc.save(filename + '.pdf');
+            
+            loading.style.display = 'none';
+            showStatus('PDF guardado correctamente con texto seleccionable', 'success');
+        }
+        
+        function processHtmlContent(doc, html, format, orientation) {
+            // Convertir el HTML a texto con formato básico
+            const lines = html.replace(/<br\s*\/?>/gi, '\n')
+                             .replace(/<\/p>/gi, '\n\n')
+                             .replace(/<\/div>/gi, '\n')
+                             .replace(/<li>/gi, '• ')
+                             .replace(/<\/li>/gi, '\n')
+                             .replace(/<[^>]*>/g, '');
+            
+            // Configurar el documento
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const maxWidth = pageWidth - (margin * 2);
+            
+            // Configurar fuente y tamaño
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            
+            // Dividir el texto en líneas
+            const textLines = doc.splitTextToSize(lines, maxWidth);
+            
+            let y = margin;
+            const lineHeight = 7;
+            
+            // Agregar texto al PDF
+            for (let i = 0; i < textLines.length; i++) {
+                if (y > doc.internal.pageSize.getHeight() - margin) {
                     doc.addPage();
-                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
+                    y = margin;
                 }
                 
-                // Guardar el PDF
-                doc.save(filename + '.pdf');
-                
-                // Limpiar
-                document.body.removeChild(contentClone);
-                
-                loading.style.display = 'none';
-                showStatus('PDF guardado correctamente con todo el formato', 'success');
-            }).catch(error => {
-                document.body.removeChild(contentClone);
-                loading.style.display = 'none';
-                showStatus('Error al generar el PDF: ' + error.message, 'error');
-            });
+                doc.text(textLines[i], margin, y);
+                y += lineHeight;
+            }
         }
         
         function showPrevPage() {

@@ -1,12 +1,11 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF con Formato Mejorado</title>
+    <title>Editor de PDF con Texto Real</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
             --primary: #3498db;
@@ -432,8 +431,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF con Formato Mejorado</h1>
-            <p class="subtitle">Formato correctamente aplicado y preservado</p>
+            <h1>Editor de PDF con Texto Real</h1>
+            <p class="subtitle">Texto seleccionable (no imagen) con formato específico</p>
         </header>
         
         <div class="main-content">
@@ -477,7 +476,7 @@
                 <h2 class="panel-title">Editor de Texto</h2>
                 
                 <div class="text-selection-info">
-                    <i class="fas fa-check-circle"></i> Formato mejorado - Ahora el formato se aplica correctamente a las partes seleccionadas
+                    <i class="fas fa-check-circle"></i> Texto real (no imagen) - Formato aplicado a selecciones específicas
                 </div>
                 
                 <div class="formatting-tools">
@@ -505,7 +504,7 @@
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
                         <li><strong>Formato aplicado solo al texto seleccionado</strong></li>
-                        <li><em>Exportación mejorada a PDF</em></li>
+                        <li><em>Texto real en el PDF (no imagen)</em></li>
                     </ul>
                     <p>Ejemplo de texto con <strong>negrita aplicada solo a estas palabras</strong>, <em>cursiva aplicada solo aquí</em>, y <u>subrayado específico</u>.</p>
                 </div>
@@ -556,7 +555,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con Formato Mejorado &copy; 2023 - Formato aplicado correctamente</p>
+            <p>Editor de PDF con Texto Real &copy; 2023 - Texto seleccionable, no imagen</p>
         </footer>
     </div>
 
@@ -778,77 +777,134 @@
             const orientation = pdfOrientation.value;
             
             loading.style.display = 'flex';
-            showStatus('Generando PDF con formato preservado...', 'success');
+            showStatus('Generando PDF con texto real...', 'success');
             
-            // Crear un clon del contenido para no afectar la visualización
-            const contentClone = textContent.cloneNode(true);
+            // Crear un nuevo documento PDF
+            const doc = new jsPDF({
+                orientation: orientation,
+                unit: 'mm',
+                format: format
+            });
             
-            // Aplicar estilos específicos para la impresión PDF
-            contentClone.style.width = "170mm";
-            contentClone.style.padding = "20mm";
-            contentClone.style.fontSize = "12pt";
-            contentClone.style.lineHeight = "1.6";
-            contentClone.style.background = "white";
+            // Obtener el texto con formato básico
+            const text = extractTextWithBasicFormatting();
             
-            // Ocultar el clon
-            contentClone.style.position = "absolute";
-            contentClone.style.left = "-9999px";
-            document.body.appendChild(contentClone);
+            // Configurar el documento
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const margin = 20;
+            const maxWidth = pageWidth - (margin * 2);
             
-            // Pequeña pausa para asegurar que el DOM se actualice
-            setTimeout(() => {
-                // Usar html2canvas para capturar el contenido con formato
-                html2canvas(contentClone, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: "#ffffff"
-                }).then(canvas => {
-                    // Crear PDF
-                    const imgData = canvas.toDataURL('image/png');
-                    const doc = new jsPDF({
-                        orientation: orientation,
-                        unit: 'mm',
-                        format: format
-                    });
-                    
-                    const pageWidth = doc.internal.pageSize.getWidth();
-                    const pageHeight = doc.internal.pageSize.getHeight();
-                    
-                    // Calcular dimensiones de la imagen para que quepa en la página
-                    const imgWidth = pageWidth - 20; // margen de 10mm cada lado
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    
-                    // Agregar la imagen al PDF
-                    let heightLeft = imgHeight;
-                    let position = 10;
-                    
-                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                    
-                    // Agregar páginas adicionales si es necesario
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        doc.addPage();
-                        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                        heightLeft -= pageHeight;
+            // Configurar fuente y tamaño
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "normal");
+            
+            // Dividir el texto en líneas
+            const lines = doc.splitTextToSize(text, maxWidth);
+            
+            let y = margin;
+            const lineHeight = 7;
+            
+            // Agregar texto al PDF
+            for (let i = 0; i < lines.length; i++) {
+                if (y > doc.internal.pageSize.getHeight() - margin) {
+                    doc.addPage();
+                    y = margin;
+                }
+                
+                // Aplicar formato básico
+                let line = lines[i];
+                
+                // Verificar si la línea contiene marcadores de formato
+                if (line.includes('**')) {
+                    // Texto en negrita
+                    const parts = line.split('**');
+                    for (let j = 0; j < parts.length; j++) {
+                        if (j % 2 === 1) {
+                            // Texto entre ** (negrita)
+                            doc.setFont("helvetica", "bold");
+                            doc.text(parts[j], margin, y);
+                            doc.setFont("helvetica", "normal");
+                        } else {
+                            // Texto normal
+                            doc.text(parts[j], margin + doc.getTextWidth(parts[j]), y);
+                        }
                     }
-                    
-                    // Guardar el PDF
-                    doc.save(filename + '.pdf');
-                    
-                    // Limpiar
-                    document.body.removeChild(contentClone);
-                    
-                    loading.style.display = 'none';
-                    showStatus('PDF guardado correctamente con formato preservado', 'success');
-                }).catch(error => {
-                    document.body.removeChild(contentClone);
-                    loading.style.display = 'none';
-                    showStatus('Error al generar el PDF: ' + error.message, 'error');
-                    console.error("Error en html2canvas:", error);
-                });
-            }, 100);
+                } else if (line.includes('*')) {
+                    // Texto en cursiva
+                    const parts = line.split('*');
+                    for (let j = 0; j < parts.length; j++) {
+                        if (j % 2 === 1) {
+                            // Texto entre * (cursiva)
+                            doc.setFont("helvetica", "italic");
+                            doc.text(parts[j], margin, y);
+                            doc.setFont("helvetica", "normal");
+                        } else {
+                            // Texto normal
+                            doc.text(parts[j], margin + doc.getTextWidth(parts[j]), y);
+                        }
+                    }
+                } else if (line.includes('_')) {
+                    // Texto subrayado
+                    const parts = line.split('_');
+                    for (let j = 0; j < parts.length; j++) {
+                        if (j % 2 === 1) {
+                            // Texto entre _ (subrayado)
+                            doc.text(parts[j], margin, y);
+                            // Línea debajo del texto para simular subrayado
+                            const textWidth = doc.getTextWidth(parts[j]);
+                            doc.line(margin, y + 1, margin + textWidth, y + 1);
+                        } else {
+                            // Texto normal
+                            doc.text(parts[j], margin + doc.getTextWidth(parts[j]), y);
+                        }
+                    }
+                } else {
+                    // Texto normal
+                    doc.text(line, margin, y);
+                }
+                
+                y += lineHeight;
+            }
+            
+            // Guardar el PDF
+            doc.save(filename + '.pdf');
+            
+            loading.style.display = 'none';
+            showStatus('PDF guardado correctamente con texto real', 'success');
+        }
+        
+        function extractTextWithBasicFormatting() {
+            let text = textContent.innerText;
+            
+            // Conservar formato básico con marcadores
+            text = text.replace(/\n\s*\n/g, '\n\n'); // Conservar saltos de párrafo
+            
+            // Marcar negritas y cursivas (formato básico)
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = textContent.innerHTML;
+            
+            // Procesar negritas
+            const boldElements = tempDiv.querySelectorAll('strong, b');
+            boldElements.forEach(el => {
+                el.outerHTML = `**${el.textContent}**`;
+            });
+            
+            // Procesar cursivas
+            const italicElements = tempDiv.querySelectorAll('em, i');
+            italicElements.forEach(el => {
+                el.outerHTML = `*${el.textContent}*`;
+            });
+            
+            // Procesar subrayados
+            const underlineElements = tempDiv.querySelectorAll('u');
+            underlineElements.forEach(el => {
+                el.outerHTML = `_${el.textContent}_`;
+            });
+            
+            // Obtener el texto con formato básico
+            text = tempDiv.textContent;
+            
+            return text;
         }
         
         function showPrevPage() {

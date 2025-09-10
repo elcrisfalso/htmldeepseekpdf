@@ -1,13 +1,12 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF con Formato Completo</title>
+    <title>Editor de PDF con Exportación Corregida</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root {
             --primary: #3498db;
@@ -235,7 +234,7 @@
                 linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
                 linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
                 linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
-                linear-gradient(-45deg, transparent 75%, #f极f0f0 75%);
+                linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
@@ -421,24 +420,24 @@
             border-radius: 4px;
         }
 
-        #pdf-preview {
-            display: none;
+        #pdf-template {
             position: absolute;
             left: -9999px;
             width: 210mm;
+            min-height: 297mm;
             padding: 20mm;
-            font-size: 12pt;
-            line-height: 1.6;
             background: white;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 12pt;
+            line-height: 1.6;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF con Formato Completo</h1>
-            <p class="subtitle">Texto seleccionable con negritas, cursivas y más</p>
+            <h1>Editor de PDF con Exportación Corregida</h1>
+            <p class="subtitle">Problema de exportación en blanco solucionado</p>
         </header>
         
         <div class="main-content">
@@ -482,7 +481,7 @@
                 <h2 class="panel-title">Editor de Texto</h2>
                 
                 <div class="text-selection-info">
-                    <i class="fas fa-info-circle"></i> Ahora el PDF conservará negritas, cursivas y todo el formato, con texto seleccionable.
+                    <i class="fas fa-check-circle"></i> Problema de exportación en blanco solucionado. Ahora el PDF se generará correctamente.
                 </div>
                 
                 <div class="formatting-tools">
@@ -505,7 +504,7 @@
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
-                        <li><strong>Texto seleccionable en el PDF resultante</strong></li>
+                        <li><strong>Exportación a PDF corregida</strong></li>
                         <li><em>Formato completo preservado</em></li>
                     </ul>
                     <p>Ejemplo de texto con <strong>negrita</strong>, <em>cursiva</em>, <u>subrayado</u> y <span style="color: #e74c3c;">color</span>.</p>
@@ -549,8 +548,8 @@
             </div>
         </div>
 
-        <!-- Área oculta para la conversión a PDF -->
-        <div id="pdf-preview"></div>
+        <!-- Plantilla para PDF -->
+        <div id="pdf-template"></div>
         
         <div class="loading" id="loading">
             <div class="spinner"></div>
@@ -560,7 +559,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con Formato Completo &copy; 2023 - Texto seleccionable con formato preservado</p>
+            <p>Editor de PDF con Exportación Corregida &copy; 2023 - Problema de exportación en blanco solucionado</p>
         </footer>
     </div>
 
@@ -571,6 +570,9 @@
     <script>
         // Configuración de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+        
+        // Inicializar jsPDF
+        const { jsPDF } = window.jspdf;
         
         // Variables globales
         let currentPdf = null;
@@ -595,7 +597,7 @@
         const pdfFilename = document.getElementById('pdf-filename');
         const pdfFormat = document.getElementById('pdf-format');
         const pdfOrientation = document.getElementById('pdf-orientation');
-        const pdfPreview = document.getElementById('pdf-preview');
+        const pdfTemplate = document.getElementById('pdf-template');
         
         // Event Listeners
         pdfFileInput.addEventListener('change', handleFileSelect);
@@ -769,33 +771,73 @@
             const orientation = pdfOrientation.value;
             
             loading.style.display = 'block';
-            showStatus('Generando PDF con formato completo...', 'success');
+            showStatus('Generando PDF...', 'success');
             
-            // Preparar el contenido para la conversión
-            const content = textContent.innerHTML;
+            // Crear un clon del contenido para no afectar la visualización
+            const contentClone = textContent.cloneNode(true);
             
-            // Configurar el área de previsualización
-            pdfPreview.innerHTML = content;
-            pdfPreview.style.display = 'block';
+            // Aplicar estilos específicos para la impresión PDF
+            contentClone.style.width = "170mm";
+            contentClone.style.padding = "20mm";
+            contentClone.style.fontSize = "12pt";
+            contentClone.style.lineHeight = "1.6";
+            contentClone.style.background = "white";
             
-            // Configurar opciones para html2pdf
-            const options = {
-                margin: 10,
-                filename: `${filename}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: format, orientation: orientation }
-            };
+            // Ocultar el clon
+            contentClone.style.position = "absolute";
+            contentClone.style.left = "-9999px";
+            document.body.appendChild(contentClone);
             
-            // Usar html2pdf para generar el PDF
-            html2pdf().set(options).from(pdfPreview).save().then(() => {
+            // Usar html2canvas para capturar el contenido con formato
+            html2canvas(contentClone, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff"
+            }).then(canvas => {
+                // Crear PDF
+                const imgData = canvas.toDataURL('image/png');
+                const doc = new jsPDF({
+                    orientation: orientation,
+                    unit: 'mm',
+                    format: format
+                });
+                
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                
+                // Calcular dimensiones de la imagen para que quepa en la página
+                const imgWidth = pageWidth - 20; // margen de 10mm cada lado
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Agregar la imagen al PDF
+                let heightLeft = imgHeight;
+                let position = 10;
+                
+                doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                
+                // Agregar páginas adicionales si es necesario
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                
+                // Guardar el PDF
+                doc.save(filename + '.pdf');
+                
+                // Limpiar
+                document.body.removeChild(contentClone);
+                
                 loading.style.display = 'none';
-                pdfPreview.style.display = 'none';
-                showStatus('PDF guardado correctamente con formato completo', 'success');
+                showStatus('PDF guardado correctamente', 'success');
             }).catch(error => {
+                document.body.removeChild(contentClone);
                 loading.style.display = 'none';
-                pdfPreview.style.display = 'none';
                 showStatus('Error al generar el PDF: ' + error.message, 'error');
+                console.error("Error en html2canvas:", error);
             });
         }
         

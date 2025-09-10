@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF Mejorado</title>
+    <title>Editor de PDF con Formato Mejorado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -304,6 +304,8 @@
             display: none;
             text-align: center;
             margin: 20px 0;
+            flex-direction: column;
+            align-items: center;
         }
         
         .spinner {
@@ -313,7 +315,7 @@
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin-bottom: 15px;
         }
         
         @keyframes spin {
@@ -367,15 +369,13 @@
         
         .feature-list li {
             margin-bottom: 10px;
-            position: relative;
         }
         
         .feature-list li:before {
             content: "✓";
             color: var(--success);
             font-weight: bold;
-            position: absolute;
-            left: -20px;
+            margin-right: 10px;
         }
 
         .save-options {
@@ -419,13 +419,21 @@
             margin: 15px 0;
             border-radius: 4px;
         }
+        
+        .format-example {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF Mejorado</h1>
-            <p class="subtitle">Exportación corregida con formato preservado</p>
+            <h1>Editor de PDF con Formato Mejorado</h1>
+            <p class="subtitle">Formato correctamente aplicado y preservado</p>
         </header>
         
         <div class="main-content">
@@ -469,7 +477,7 @@
                 <h2 class="panel-title">Editor de Texto</h2>
                 
                 <div class="text-selection-info">
-                    <i class="fas fa-check-circle"></i> Exportación corregida - Formato preservado - Texto seleccionable
+                    <i class="fas fa-check-circle"></i> Formato mejorado - Ahora el formato se aplica correctamente a las partes seleccionadas
                 </div>
                 
                 <div class="formatting-tools">
@@ -484,19 +492,22 @@
                     <button class="format-btn" data-command="removeFormat" title="Quitar formato"><i class="fas fa-eraser"></i></button>
                 </div>
                 
+                <div class="format-example">
+                    <p><strong>Instrucciones:</strong> Selecciona el texto que deseas formatear y luego haz clic en el botón de formato correspondiente.</p>
+                </div>
+                
                 <div class="text-content" id="text-content" contenteditable="true">
                     <p>El texto extraído aparecerá aquí. Puedes editarlo directamente utilizando las herramientas de formato.</p>
                     <p>Características del editor:</p>
                     <ul class="feature-list">
-                        <li>Texto con <strong>negritas</strong> y <em>cursivas</em> perfectamente compatibles</li>
+                        <li>Texto con <strong>negritas</strong> y <em>cursivas</em> aplicadas correctamente</li>
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
-                        <li><strong>Exportación a PDF corregida</strong></li>
-                        <li><em>Formato completo preservado</em></li>
-                        <li>Texto seleccionable en el PDF resultante</li>
+                        <li><strong>Formato aplicado solo al texto seleccionado</strong></li>
+                        <li><em>Exportación mejorada a PDF</em></li>
                     </ul>
-                    <p>Ejemplo de texto con <strong>negrita</strong>, <em>cursiva</em>, <u>subrayado</u> y <span style="color: #e74c3c;">color</span>.</p>
+                    <p>Ejemplo de texto con <strong>negrita aplicada solo a estas palabras</strong>, <em>cursiva aplicada solo aquí</em>, y <u>subrayado específico</u>.</p>
                 </div>
                 
                 <div class="save-options">
@@ -545,7 +556,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF Mejorado &copy; 2023 - Exportación corregida con formato preservado</p>
+            <p>Editor de PDF con Formato Mejorado &copy; 2023 - Formato aplicado correctamente</p>
         </footer>
     </div>
 
@@ -596,7 +607,18 @@
         formatButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const command = button.dataset.command;
-                document.execCommand(command, false, null);
+                // Guardar la selección actual
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    if (!range.collapsed) {
+                        document.execCommand(command, false, null);
+                    } else {
+                        showStatus('Primero selecciona el texto que deseas formatear', 'error');
+                    }
+                } else {
+                    showStatus('Primero selecciona el texto que deseas formatear', 'error');
+                }
                 textContent.focus();
             });
         });
@@ -630,7 +652,7 @@
         }
         
         function loadPdf(file) {
-            loading.style.display = 'block';
+            loading.style.display = 'flex';
             statusMessage.textContent = '';
             statusMessage.className = 'status';
             
@@ -680,7 +702,7 @@
                 return;
             }
             
-            loading.style.display = 'block';
+            loading.style.display = 'flex';
             pdfText = "";
             
             // Extraer texto de todas las páginas
@@ -714,7 +736,7 @@
                 return;
             }
             
-            loading.style.display = 'block';
+            loading.style.display = 'flex';
             statusMessage.textContent = '';
             statusMessage.className = 'status';
             
@@ -755,7 +777,7 @@
             const format = pdfFormat.value;
             const orientation = pdfOrientation.value;
             
-            loading.style.display = 'block';
+            loading.style.display = 'flex';
             showStatus('Generando PDF con formato preservado...', 'success');
             
             // Crear un clon del contenido para no afectar la visualización
@@ -773,57 +795,60 @@
             contentClone.style.left = "-9999px";
             document.body.appendChild(contentClone);
             
-            // Usar html2canvas para capturar el contenido con formato
-            html2canvas(contentClone, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: "#ffffff"
-            }).then(canvas => {
-                // Crear PDF
-                const imgData = canvas.toDataURL('image/png');
-                const doc = new jsPDF({
-                    orientation: orientation,
-                    unit: 'mm',
-                    format: format
-                });
-                
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-                
-                // Calcular dimensiones de la imagen para que quepa en la página
-                const imgWidth = pageWidth - 20; // margen de 10mm cada lado
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                
-                // Agregar la imagen al PDF
-                let heightLeft = imgHeight;
-                let position = 10;
-                
-                doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-                
-                // Agregar páginas adicionales si es necesario
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    doc.addPage();
+            // Pequeña pausa para asegurar que el DOM se actualice
+            setTimeout(() => {
+                // Usar html2canvas para capturar el contenido con formato
+                html2canvas(contentClone, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: "#ffffff"
+                }).then(canvas => {
+                    // Crear PDF
+                    const imgData = canvas.toDataURL('image/png');
+                    const doc = new jsPDF({
+                        orientation: orientation,
+                        unit: 'mm',
+                        format: format
+                    });
+                    
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const pageHeight = doc.internal.pageSize.getHeight();
+                    
+                    // Calcular dimensiones de la imagen para que quepa en la página
+                    const imgWidth = pageWidth - 20; // margen de 10mm cada lado
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    
+                    // Agregar la imagen al PDF
+                    let heightLeft = imgHeight;
+                    let position = 10;
+                    
                     doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
                     heightLeft -= pageHeight;
-                }
-                
-                // Guardar el PDF
-                doc.save(filename + '.pdf');
-                
-                // Limpiar
-                document.body.removeChild(contentClone);
-                
-                loading.style.display = 'none';
-                showStatus('PDF guardado correctamente con formato preservado', 'success');
-            }).catch(error => {
-                document.body.removeChild(contentClone);
-                loading.style.display = 'none';
-                showStatus('Error al generar el PDF: ' + error.message, 'error');
-                console.error("Error en html2canvas:", error);
-            });
+                    
+                    // Agregar páginas adicionales si es necesario
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        doc.addPage();
+                        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    // Guardar el PDF
+                    doc.save(filename + '.pdf');
+                    
+                    // Limpiar
+                    document.body.removeChild(contentClone);
+                    
+                    loading.style.display = 'none';
+                    showStatus('PDF guardado correctamente con formato preservado', 'success');
+                }).catch(error => {
+                    document.body.removeChild(contentClone);
+                    loading.style.display = 'none';
+                    showStatus('Error al generar el PDF: ' + error.message, 'error');
+                    console.error("Error en html2canvas:", error);
+                });
+            }, 100);
         }
         
         function showPrevPage() {

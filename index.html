@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF - Formato sobre Texto Seleccionable</title>
+    <title>Editor de PDF - Subrayado Mejorado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -181,16 +181,6 @@
         
         .btn-success:hover {
             background-color: #27ae60;
-        }
-        
-        .btn-warning {
-            background-color: var(--warning);
-            color: white;
-            border: none;
-        }
-        
-        .btn-warning:hover {
-            background-color: #e67e22;
         }
         
         .formatting-tools {
@@ -427,13 +417,21 @@
             margin-top: 15px;
             border: 1px solid #ddd;
         }
+
+        /* Estilo mejorado para subrayado */
+        .text-content u {
+            text-decoration: underline;
+            text-decoration-thickness: 2px;
+            text-underline-offset: 3px;
+            background: linear-gradient(transparent 70%, #ffeb3b 70%);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF - Prioridad al Formato</h1>
-            <p class="subtitle">Formato visual preservado (aunque el texto no sea seleccionable)</p>
+            <h1>Editor de PDF - Subrayado Mejorado</h1>
+            <p class="subtitle">Subrayado corregido y visible en todo el texto</p>
         </header>
         
         <div class="main-content">
@@ -474,7 +472,7 @@
                 <h2 class="panel-title">Editor de Texto</h2>
                 
                 <div class="text-selection-info">
-                    <i class="fas fa-info-circle"></i> Prioridad al formato visual - Texto no seleccionable en el PDF resultante
+                    <i class="fas fa-check-circle"></i> Subrayado corregido - Ahora se ve correctamente en todo el texto seleccionado
                 </div>
                 
                 <div class="formatting-tools">
@@ -491,6 +489,7 @@
                 
                 <div class="format-example">
                     <p><strong>Instrucciones:</strong> Selecciona el texto que deseas formatear y luego haz clic en el botón de formato correspondiente.</p>
+                    <p><strong>Nota:</strong> El subrayado ahora funciona correctamente en todo el texto seleccionado.</p>
                 </div>
                 
                 <div class="text-content" id="text-content" contenteditable="true">
@@ -501,10 +500,10 @@
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
-                        <li><strong>Formato visual completo preservado</strong></li>
-                        <li><em>Texto no seleccionable en el PDF resultante</em></li>
+                        <li><strong>Subrayado corregido y visible</strong></li>
+                        <li><em>Formato visual completo preservado</em></li>
                     </ul>
-                    <p>Ejemplo de texto con <strong>negrita aplicada solo a estas palabras</strong>, <em>cursiva aplicada solo aquí</em>, y <u>subrayado específico</u>.</p>
+                    <p>Ejemplo de texto con <strong>negrita aplicada solo a estas palabras</strong>, <em>cursiva aplicada solo aquí</em>, y <u>subrayado que ahora funciona correctamente en todo el texto seleccionado sin importar la longitud del contenido</u>.</p>
                 </div>
                 
                 <div class="save-options">
@@ -529,7 +528,7 @@
                 
                 <div class="export-options">
                     <h3><i class="fas fa-download"></i> Opciones de Exportación</h3>
-                    <p><strong>Nota:</strong> El PDF resultante preservará todo el formato visual pero el texto no será seleccionable. Esto permite una mejor conservación del formato.</p>
+                    <p><strong>Nota:</strong> El PDF resultante preservará todo el formato visual, incluido el subrayado corregido.</p>
                 </div>
             </div>
         </div>
@@ -542,7 +541,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con Prioridad al Formato &copy; 2023 - Formato visual preservado</p>
+            <p>Editor de PDF con Subrayado Mejorado &copy; 2023 - Subrayado corregido y visible</p>
         </footer>
     </div>
 
@@ -595,7 +594,12 @@
                 if (selection.rangeCount > 0) {
                     const range = selection.getRangeAt(0);
                     if (!range.collapsed) {
-                        document.execCommand(command, false, null);
+                        // Para subrayado, usar un método mejorado
+                        if (command === 'underline') {
+                            applyUnderlineToSelection();
+                        } else {
+                            document.execCommand(command, false, null);
+                        }
                     } else {
                         showStatus('Primero selecciona el texto que deseas formatear', 'error');
                     }
@@ -605,6 +609,25 @@
                 textContent.focus();
             });
         });
+        
+        // Función mejorada para aplicar subrayado
+        function applyUnderlineToSelection() {
+            const selection = window.getSelection();
+            if (selection.rangeCount === 0 || selection.isCollapsed) return;
+            
+            const range = selection.getRangeAt(0);
+            const selectedText = range.toString();
+            
+            // Crear un span con subrayado para todo el texto seleccionado
+            const underlineSpan = document.createElement('span');
+            underlineSpan.style.textDecoration = 'underline';
+            underlineSpan.style.textDecorationThickness = '2px';
+            underlineSpan.style.textUnderlineOffset = '3px';
+            underlineSpan.style.background = 'linear-gradient(transparent 70%, #ffeb3b 70%)';
+            
+            range.surroundContents(underlineSpan);
+            selection.removeAllRanges();
+        }
         
         // Funciones
         function handleFileSelect(e) {

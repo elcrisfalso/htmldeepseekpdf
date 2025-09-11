@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDF - Subrayado Mejorado</title>
+    <title>Editor de PDF - Formato Combinado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -222,10 +222,10 @@
             margin-bottom: 20px;
             background-image: 
                 linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
-                linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+                linear-gradient(-45deg, #f0f极f0 25%, transparent 25%), 
                 linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
                 linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
-            background-size: 20px 20px;
+            background-size: 20极x 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
         }
         
@@ -291,7 +291,7 @@
         }
         
         .spinner {
-            border: 4px solid #f3f3f3;
+            border: 4px solid #极3f3f3;
             border-top: 4px solid var(--primary);
             border-radius: 50%;
             width: 40px;
@@ -314,7 +314,7 @@
         }
         
         .page-btn {
-            padding: 8px 15px;
+            padding: 8极x 15px;
             background-color: var(--primary);
             color: white;
             border: none;
@@ -378,7 +378,7 @@
             margin-right: 10px;
         }
         
-        .save-input {
+极       .save-input {
             width: 100%;
             padding: 10px;
             margin-bottom: 10px;
@@ -425,13 +425,20 @@
             text-underline-offset: 3px;
             background: linear-gradient(transparent 70%, #ffeb3b 70%);
         }
+        
+        /* Indicador de formato activo */
+        .format-btn.format-active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Editor de PDF - Subrayado Mejorado</h1>
-            <p class="subtitle">Subrayado corregido y visible en todo el texto</p>
+            <h1>Editor de PDF - Formato Combinado</h1>
+            <p class="subtitle">Combina negritas, cursivas y subrayado en el mismo texto</p>
         </header>
         
         <div class="main-content">
@@ -462,7 +469,7 @@
                 </div>
                 
                 <div class="page-controls">
-                    <button class="page-btn" id="prev-page"><i class="fas fa-chevron-left"></i> Anterior</button>
+                    <button class="page-btn极" id="prev-page"><i class="fas fa-chevron-left"></i> Anterior</button>
                     <span class="page-info" id="page-info">Página 0 de 0</span>
                     <button class="page-btn" id="next-page">Siguiente <i class="fas fa-chevron-right"></i></button>
                 </div>
@@ -472,24 +479,18 @@
                 <h2 class="panel-title">Editor de Texto</h2>
                 
                 <div class="text-selection-info">
-                    <i class="fas fa-check-circle"></i> Subrayado corregido - Ahora se ve correctamente en todo el texto seleccionado
+                    <i class="fas fa-check-circle"></i> Ahora puedes combinar negritas, cursivas y subrayado en el mismo texto
                 </div>
                 
                 <div class="formatting-tools">
-                    <button class="format-btn" data-command="bold" title="Negrita"><i class="fas fa-bold"></i></button>
-                    <button class="format-btn" data-command="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
-                    <button class="format-btn" data-command="underline" title="Subrayado"><i class="fas fa-underline"></i></button>
-                    <button class="format-btn" data-command="insertUnorderedList" title="Lista con viñetas"><i class="fas fa-list-ul"></i></button>
-                    <button class="format-btn" data-command="insertOrderedList" title="Lista numerada"><i class="fas fa-list-ol"></i></button>
-                    <button class="format-btn" data-command="justifyLeft" title="Alinear a la izquierda"><i class="fas fa-align-left"></i></button>
-                    <button class="format-btn" data-command="justifyCenter" title="Centrar"><i class="fas fa-align-center"></i></button>
-                    <button class="format-btn" data-command="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
+                    <button class="format-btn" data-command="bold" title="Negrita" id="bold-btn"><i class="fas fa-bold"></i></button>
+                    <button class="format-btn" data-command="italic" title="Cursiva" id="italic-btn"><i class="fas fa-italic"></i></button>
+                    <button class="format-btn" data-command="underline" title="Subrayado" id="underline-btn"><i class="fas fa-underline"></i></button>
                     <button class="format-btn" data-command="removeFormat" title="Quitar formato"><i class="fas fa-eraser"></i></button>
                 </div>
                 
                 <div class="format-example">
-                    <p><strong>Instrucciones:</strong> Selecciona el texto que deseas formatear y luego haz clic en el botón de formato correspondiente.</p>
-                    <p><strong>Nota:</strong> El subrayado ahora funciona correctamente en todo el texto seleccionado.</p>
+                    <p><strong>Instrucciones:</strong> Selecciona el texto y aplica múltiples formatos. Puedes combinar <strong><em><u>negritas, cursivas y subrayado</u></em></strong> en el mismo texto.</p>
                 </div>
                 
                 <div class="text-content" id="text-content" contenteditable="true">
@@ -500,10 +501,10 @@
                         <li>Párrafos correctamente separados</li>
                         <li>Listas con viñetas y numeradas</li>
                         <li>Diferentes alineaciones de texto</li>
-                        <li><strong>Subrayado corregido y visible</strong></li>
+                        <li><strong><em><u>Formatos combinados</u></em></strong> en el mismo texto</li>
                         <li><em>Formato visual completo preservado</em></li>
                     </ul>
-                    <p>Ejemplo de texto con <strong>negrita aplicada solo a estas palabras</strong>, <em>cursiva aplicada solo aquí</em>, y <u>subrayado que ahora funciona correctamente en todo el texto seleccionado sin importar la longitud del contenido</u>.</p>
+                    <p>Ejemplo de texto con <strong>negrita</strong>, <em>cursiva</em>, <u>subrayado</u> y <strong><em><u>combinación de todos los formatos</u></em></strong>.</p>
                 </div>
                 
                 <div class="save-options">
@@ -520,7 +521,7 @@
                     <div class="option-group">
                         <label for="pdf-orientation">Orientación:</label>
                         <select id="pdf-orientation">
-                            <option value="portrait">Vertical</option>
+                            <option value极="portrait">Vertical</option>
                             <option value="landscape">Horizontal</option>
                         </select>
                     </div>
@@ -528,7 +529,7 @@
                 
                 <div class="export-options">
                     <h3><i class="fas fa-download"></i> Opciones de Exportación</h3>
-                    <p><strong>Nota:</strong> El PDF resultante preservará todo el formato visual, incluido el subrayado corregido.</p>
+                    <p><strong>Nota:</strong> El PDF resultante preservará todo el formato visual, incluidos los formatos combinados.</p>
                 </div>
             </div>
         </div>
@@ -541,7 +542,7 @@
         <div class="status" id="status-message"></div>
         
         <footer>
-            <p>Editor de PDF con Subrayado Mejorado &copy; 2023 - Subrayado corregido y visible</p>
+            <p>Editor de PDF con Formato Combinado &copy; 2023 - Combina negritas, cursivas y subrayado</p>
         </footer>
     </div>
 
@@ -577,6 +578,9 @@
         const pdfFilename = document.getElementById('pdf-filename');
         const pdfFormat = document.getElementById('pdf-format');
         const pdfOrientation = document.getElementById('pdf-orientation');
+        const boldBtn = document.getElementById('bold-btn');
+        const italicBtn = document.getElementById('italic-btn');
+        const underlineBtn = document.getElementById('underline-btn');
         
         // Event Listeners
         pdfFileInput.addEventListener('change', handleFileSelect);
@@ -589,6 +593,13 @@
         formatButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const command = button.dataset.command;
+                
+                if (command === 'removeFormat') {
+                    document.execCommand('removeFormat', false, null);
+                    resetButtonStyles();
+                    return;
+                }
+                
                 // Guardar la selección actual
                 const selection = window.getSelection();
                 if (selection.rangeCount > 0) {
@@ -600,6 +611,9 @@
                         } else {
                             document.execCommand(command, false, null);
                         }
+                        
+                        // Actualizar estado de botones
+                        updateButtonState(command, button);
                     } else {
                         showStatus('Primero selecciona el texto que deseas formatear', 'error');
                     }
@@ -610,13 +624,44 @@
             });
         });
         
+        // Función para actualizar el estado de los botones
+        function updateButtonState(command, button) {
+            // Alternar clase activa
+            button.classList.toggle('format-active');
+            
+            // Verificar el estado actual del formato en la selección
+            const isActive = button.classList.contains('format-active');
+            
+            // Aplicar estilo visual al botón
+            if (isActive) {
+                button.style.backgroundColor = '#3498db';
+                button.style.color = 'white';
+            } else {
+                button.style.backgroundColor = '';
+                button.style.color = '';
+            }
+        }
+        
+        // Función para resetear estilos de botones
+        function resetButtonStyles() {
+            boldBtn.classList.remove('format-active');
+            italicBtn.classList.remove('format-active');
+            underlineBtn.classList.remove('format-active');
+            
+            boldBtn.style.backgroundColor = '';
+            boldBtn.style.color = '';
+            italicBtn.style.backgroundColor = '';
+            italicBtn.style.color = '';
+            underlineBtn.style.backgroundColor = '';
+            underlineBtn.style.color = '';
+        }
+        
         // Función mejorada para aplicar subrayado
         function applyUnderlineToSelection() {
             const selection = window.getSelection();
             if (selection.rangeCount === 0 || selection.isCollapsed) return;
             
             const range = selection.getRangeAt(0);
-            const selectedText = range.toString();
             
             // Crear un span con subrayado para todo el texto seleccionado
             const underlineSpan = document.createElement('span');
@@ -647,12 +692,12 @@
                 }
                 
                 fileInfo.textContent = `Archivo: ${file.name} (${formatFileSize(file.size)})`;
-                loadPdf(file);
+                load极df(file);
             }
         }
         
         function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' bytes';
+            if (bytes < 102极) return bytes + ' bytes';
             else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
             else return (bytes / 1048576).toFixed(1) + ' MB';
         }
@@ -726,7 +771,7 @@
             
             Promise.all(extractPromises).then(pageTexts => {
                 // Asegurar separación adecuada entre párrafos
-                pdfText = pageTexts.join('\n\n');
+                pdfText = page极exts.join('\n\n');
                 textContent.innerHTML = pdfText;
                 loading.style.display = 'none';
                 showStatus('Texto extraído correctamente', 'success');
@@ -741,112 +786,4 @@
             const format = pdfFormat.value;
             const orientation = pdfOrientation.value;
             
-            loading.style.display = 'flex';
-            showStatus('Generando PDF con formato preservado...', 'success');
-            
-            // Crear un clon del contenido para no afectar la visualización
-            const contentClone = textContent.cloneNode(true);
-            
-            // Aplicar estilos específicos para la impresión PDF
-            contentClone.style.width = "170mm";
-            contentClone.style.padding = "20mm";
-            contentClone.style.fontSize = "12pt";
-            contentClone.style.lineHeight = "1.6";
-            contentClone.style.background = "white";
-            
-            // Ocultar el clon
-            contentClone.style.position = "absolute";
-            contentClone.style.left = "-9999px";
-            document.body.appendChild(contentClone);
-            
-            // Pequeña pausa para asegurar que el DOM se actualice
-            setTimeout(() => {
-                // Usar html2canvas para capturar el contenido con formato
-                html2canvas(contentClone, {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    backgroundColor: "#ffffff"
-                }).then(canvas => {
-                    // Crear PDF
-                    const imgData = canvas.toDataURL('image/png');
-                    const doc = new jsPDF({
-                        orientation: orientation,
-                        unit: 'mm',
-                        format: format
-                    });
-                    
-                    const pageWidth = doc.internal.pageSize.getWidth();
-                    const pageHeight = doc.internal.pageSize.getHeight();
-                    
-                    // Calcular dimensiones de la imagen para que quepa en la página
-                    const imgWidth = pageWidth - 20; // margen de 10mm cada lado
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    
-                    // Agregar la imagen al PDF
-                    let heightLeft = imgHeight;
-                    let position = 10;
-                    
-                    doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                    
-                    // Agregar páginas adicionales si es necesario
-                    while (heightLeft >= 0) {
-                        position = heightLeft - imgHeight;
-                        doc.addPage();
-                        doc.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-                        heightLeft -= pageHeight;
-                    }
-                    
-                    // Guardar el PDF
-                    doc.save(filename + '.pdf');
-                    
-                    // Limpiar
-                    document.body.removeChild(contentClone);
-                    
-                    loading.style.display = 'none';
-                    showStatus('PDF guardado correctamente con formato preservado', 'success');
-                }).catch(error => {
-                    document.body.removeChild(contentClone);
-                    loading.style.display = 'none';
-                    showStatus('Error al generar el PDF: ' + error.message, 'error');
-                    console.error("Error en html2canvas:", error);
-                });
-            }, 100);
-        }
-        
-        function showPrevPage() {
-            if (currentPdf && currentPage > 1) {
-                currentPage--;
-                updatePageInfo();
-                renderPage(currentPage);
-            }
-        }
-        
-        function showNextPage() {
-            if (currentPdf && currentPage < currentPdf.numPages) {
-                currentPage++;
-                updatePageInfo();
-                renderPage(currentPage);
-            }
-        }
-        
-        function updatePageInfo() {
-            if (currentPdf) {
-                pageInfo.textContent = `Página ${currentPage} de ${currentPdf.numPages}`;
-            }
-        }
-        
-        function showStatus(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.className = 'status ' + type;
-            
-            // Ocultar el mensaje después de 5 segundos
-            setTimeout(() => {
-                statusMessage.textContent = '';
-                statusMessage.className = 'status';
-            }, 5000);
-        }
-    </script>
-</body>
-</html>
+            loading.style.display = '

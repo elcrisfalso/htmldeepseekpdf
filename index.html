@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor de PDFs con Edición de Texto</title>
+    <title>Editor de PDFs Avanzado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     <style>
         :root {
             --primary-color: #4a6fa5;
@@ -189,6 +188,7 @@
             justify-content: center;
             align-items: flex-start;
             padding: 20px;
+            min-height: 500px;
         }
         
         #pdf-canvas {
@@ -203,6 +203,7 @@
             min-height: 40px;
             padding: 5px;
             border: 1px dashed transparent;
+            user-select: none;
         }
         
         .text-element:hover {
@@ -349,7 +350,7 @@
             <div class="toolbar">
                 <div class="toolbar-section">
                     <h3>Archivo PDF</h3>
-                    <button class="btn" id="selectFiles">
+                    <button class="btn" id="selectFilesBtn">
                         <i>📁</i> Cargar PDF
                     </button>
                     <input type="file" id="fileInput" accept=".pdf" style="display: none;">
@@ -434,7 +435,7 @@
                     <div class="drop-area" id="dropArea">
                         <p>Arrastra y suelta tu archivo PDF aquí</p>
                         <p>o</p>
-                        <button class="btn" id="selectFilesBtn">Seleccionar archivo PDF</button>
+                        <button class="btn" id="selectFilesBtn2">Seleccionar archivo PDF</button>
                     </div>
                 </div>
                 
@@ -499,6 +500,9 @@
         let selectedElement = null;
         let isEditMode = false;
         let isDeleteMode = false;
+        let isDragging = false;
+        let dragStartX, dragStartY;
+        let initialX, initialY;
         
         // Inicializar cuando el DOM esté listo
         document.addEventListener('DOMContentLoaded', function() {
@@ -520,6 +524,10 @@
         function initEventListeners() {
             // Eventos para cargar PDF
             document.getElementById('selectFilesBtn').addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+            
+            document.getElementById('selectFilesBtn2').addEventListener('click', () => {
                 document.getElementById('fileInput').click();
             });
             
@@ -591,12 +599,15 @@
             }
             
             showProgressModal('Cargando PDF...');
+            updateProgress(10);
             
             const reader = new FileReader();
             reader.onload = function(e) {
+                updateProgress(30);
                 const typedarray = new Uint8Array(e.target.result);
                 
                 pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                    updateProgress(60);
                     pdfDoc = pdf;
                     currentPdf = pdf;
                     
@@ -612,7 +623,10 @@
                         document.getElementById('docInfo').textContent = `Documento: ${file.name}`;
                         document.getElementById('pageInfo').textContent = `Página: 1/${pdf.numPages}`;
                         
-                        hideProgressModal();
+                        updateProgress(100);
+                        setTimeout(() => {
+                            hideProgressModal();
+                        }, 500);
                     });
                 }).catch(error => {
                     console.error('Error al cargar el PDF:', error);
@@ -636,14 +650,15 @@
                             resolve(true);
                         }
                     });
+                }).catch(() => {
+                    // En caso de error, asumimos que es escaneado
+                    resolve(true);
                 });
             });
         }
         
         function renderPage(pageNum) {
             if (!pdfDoc) return;
-            
-            showProgressModal('Cargando página...');
             
             pdfDoc.getPage(pageNum).then(page => {
                 const viewport = page.getViewport({ scale: 1.5 });
@@ -658,7 +673,6 @@
                 page.render(renderContext).promise.then(() => {
                     currentPageNum = pageNum;
                     document.getElementById('pageInfo').textContent = `Página: ${pageNum}/${pdfDoc.numPages}`;
-                    hideProgressModal();
                     
                     // Volver a renderizar elementos de texto
                     renderTextElements();
@@ -731,6 +745,9 @@
                 
                 textElements.push(newElement);
                 selectedElement = newElement;
+                
+                // Hacer el texto arrastrable
+                makeTextDraggable(newElement);
             }
             
             // Renderizar elementos de texto
@@ -748,6 +765,12 @@
             if (confirm('¿Estás seguro de que deseas eliminar este texto?')) {
                 // Eliminar elemento
                 textElements = textElements.filter(el => el.id !== element.id);
+                
+                // Eliminar elemento del DOM
+                const textDiv = document.getElementById(`text-${element.id}`);
+                if (textDiv) {
+                    textDiv.remove();
+                }
                 
                 // Volver a renderizar
                 renderTextElements();
@@ -788,10 +811,8 @@
         }
         
         function renderTextElements() {
-            // Limpiar el canvas
-            if (pdfDoc) {
-                renderPage(currentPageNum);
-            }
+            // Limpiar elementos de texto existentes
+            document.querySelectorAll('.text-element').forEach(el => el.remove());
             
             // Renderizar cada elemento de texto
             textElements.forEach(element => {
@@ -801,22 +822,10 @@
         
         function renderTextElement(element) {
             // Crear elemento div para el texto
-            let textDiv = document.getElementById(`text-${element.id}`);
-            
-            if (!textDiv) {
-                textDiv = document.createElement('div');
-                textDiv.id = `text-${element.id}`;
-                textDiv.className = 'text-element';
-                textDiv.style.position = 'absolute';
-                document.getElementById('pdfContainer').appendChild(textDiv);
-                
-                // Agregar evento de clic
-                textDiv.addEventListener('click', () => {
-                    selectTextElement(element);
-                });
-            }
-            
-            // Aplicar estilos
+            const textDiv = document.createElement('div');
+            textDiv.id = `text-${element.id}`;
+            textDiv.className = 'text-element';
+            textDiv.style.position = 'absolute';
             textDiv.style.left = `${element.x}px`;
             textDiv.style.top = `${element.y}px`;
             textDiv.style.fontSize = `${element.fontSize}px`;
@@ -826,6 +835,7 @@
             textDiv.style.fontWeight = element.bold ? 'bold' : 'normal';
             textDiv.style.fontStyle = element.italic ? 'italic' : 'normal';
             textDiv.style.textDecoration = element.underline ? 'underline' : 'none';
+            textDiv.style.zIndex = '10';
             
             // Establecer contenido
             textDiv.textContent = element.text;
@@ -833,9 +843,53 @@
             // Si es el elemento seleccionado, resaltarlo
             if (selectedElement && selectedElement.id === element.id) {
                 textDiv.classList.add('selected');
-            } else {
-                textDiv.classList.remove('selected');
             }
+            
+            // Agregar evento de clic
+            textDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectTextElement(element);
+            });
+            
+            // Agregar al contenedor
+            document.getElementById('pdfContainer').appendChild(textDiv);
+        }
+        
+        function makeTextDraggable(element) {
+            const textDiv = document.getElementById(`text-${element.id}`);
+            if (!textDiv) return;
+            
+            textDiv.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                isDragging = true;
+                selectedElement = element;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                initialX = element.x;
+                initialY = element.y;
+                
+                // Agregar eventos de mouse
+                document.addEventListener('mousemove', handleDrag);
+                document.addEventListener('mouseup', stopDrag);
+            });
+        }
+        
+        function handleDrag(e) {
+            if (!isDragging || !selectedElement) return;
+            
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            
+            selectedElement.x = initialX + dx;
+            selectedElement.y = initialY + dy;
+            
+            renderTextElements();
+        }
+        
+        function stopDrag() {
+            isDragging = false;
+            document.removeEventListener('mousemove', handleDrag);
+            document.removeEventListener('mouseup', stopDrag);
         }
         
         function selectTextElement(element) {
@@ -873,30 +927,38 @@
         
         function savePdf() {
             showProgressModal('Guardando PDF...');
+            updateProgress(30);
             
             // Simular proceso de guardado
             setTimeout(() => {
-                hideProgressModal();
-                alert('PDF guardado correctamente. En una aplicación real, se guardarían todos los cambios.');
+                updateProgress(100);
+                setTimeout(() => {
+                    hideProgressModal();
+                    alert('PDF guardado correctamente. En una aplicación real, se guardarían todos los cambios.');
+                }, 500);
             }, 1500);
         }
         
         function downloadPdf() {
             showProgressModal('Generando PDF para descarga...');
+            updateProgress(30);
             
             // Simular proceso de generación de PDF
             setTimeout(() => {
-                hideProgressModal();
-                
-                // Crear un enlace de descarga
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL();
-                link.download = 'documento_editado.pdf';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                alert('PDF descargado. En una aplicación real, se generaría un PDF con todo el contenido editado.');
+                updateProgress(100);
+                setTimeout(() => {
+                    hideProgressModal();
+                    
+                    // Crear un enlace de descarga
+                    const link = document.createElement('a');
+                    link.href = canvas.toDataURL();
+                    link.download = 'documento_editado.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    alert('PDF descargado. En una aplicación real, se generaría un PDF con todo el contenido editado.');
+                }, 500);
             }, 2000);
         }
         
@@ -932,6 +994,13 @@
         
         function hideProgressModal() {
             document.getElementById('progressModal').style.display = 'none';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressText').textContent = '0%';
+        }
+        
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = `${percent}%`;
         }
     </script>
 </body>

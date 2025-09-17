@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Editor de PDFs Avanzado</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.0.2/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <style>
         :root {
             --primary-color: #4a6fa5;
@@ -32,7 +33,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -163,20 +164,45 @@
             background-color: #e9ecef;
         }
         
-        .pdf-viewer {
+        .text-align-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .text-align-group button {
+            width: 30%;
+            text-align: center;
+            padding: 5px;
+        }
+        
+        .pdf-viewer-container {
             flex-grow: 1;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 15px;
-            min-height: 500px;
+            min-height: 600px;
             overflow: auto;
+            position: relative;
         }
         
-        .pdf-page {
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-            position: relative;
+        #pdf-canvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        #text-editor {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            min-width: 200px;
+            display: none;
         }
         
         .status-bar {
@@ -259,7 +285,7 @@
             font-size: 14px;
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 992px) {
             .editor-container {
                 flex-direction: column;
             }
@@ -294,9 +320,54 @@
             <div class="toolbar">
                 <h3>Herramientas de Texto</h3>
                 <div class="tool-group">
+                    <button id="addTextBtn">Agregar Texto</button>
+                    <button id="editTextBtn">Editar Texto</button>
+                    <button id="deleteTextBtn">Eliminar Texto</button>
+                </div>
+                
+                <div class="tool-group">
                     <button id="boldBtn"><strong>Negrita</strong></button>
                     <button id="italicBtn"><em>Cursiva</em></button>
                     <button id="underlineBtn"><u>Subrayado</u></button>
+                </div>
+                
+                <div class="tool-group">
+                    <label for="fontSize">Tamaño de fuente:</label>
+                    <select id="fontSize" class="btn">
+                        <option value="12">12px</option>
+                        <option value="14">14px</option>
+                        <option value="16" selected>16px</option>
+                        <option value="18">18px</option>
+                        <option value="20">20px</option>
+                        <option value="24">24px</option>
+                        <option value="28">28px</option>
+                        <option value="32">32px</option>
+                    </select>
+                </div>
+                
+                <div class="tool-group">
+                    <label for="fontFamily">Fuente:</label>
+                    <select id="fontFamily" class="btn">
+                        <option value="Arial" selected>Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                    </select>
+                </div>
+                
+                <div class="tool-group">
+                    <label for="textColor">Color de texto:</label>
+                    <input type="color" id="textColor" value="#000000" class="btn">
+                </div>
+                
+                <div class="tool-group">
+                    <label>Alineación de texto:</label>
+                    <div class="text-align-group">
+                        <button id="alignLeftBtn">◀</button>
+                        <button id="alignCenterBtn">●</button>
+                        <button id="alignRightBtn">▶</button>
+                    </div>
                 </div>
                 
                 <h3>Imágenes</h3>
@@ -312,14 +383,20 @@
                 </div>
             </div>
             
-            <div class="pdf-viewer" id="pdfViewer">
-                <p class="document-info">Carga un documento PDF para comenzar a editarlo.</p>
+            <div class="pdf-viewer-container">
+                <canvas id="pdf-canvas"></canvas>
+                <div id="text-editor">
+                    <textarea id="text-editor-area" style="width: 100%; height: 100px; margin-bottom: 10px;"></textarea>
+                    <button id="text-editor-save" class="btn btn-success">Guardar</button>
+                    <button id="text-editor-cancel" class="btn btn-danger">Cancelar</button>
+                </div>
             </div>
         </div>
         
         <div class="status-bar">
             <div class="document-info" id="docInfo">No hay documentos cargados</div>
             <div class="document-info" id="docType">Tipo: Desconocido</div>
+            <div class="document-info" id="pageInfo">Página: 0/0</div>
         </div>
         
         <footer>
@@ -330,7 +407,7 @@
     <div class="modal" id="progressModal">
         <div class="modal-content">
             <h3>Procesando documento</h3>
-            <p>Analizando texto para detectar tipo de documento...</p>
+            <p id="progressMessage">Analizando texto para detectar tipo de documento...</p>
             <div class="progress-bar">
                 <div class="progress" id="progressBar"></div>
             </div>
@@ -340,33 +417,58 @@
 
     <script>
         // Variables globales
-        let currentPDF = null;
+        let currentPdf = null;
+        let currentPageNum = 1;
         let pdfDocs = [];
-        let selectedText = null;
         let isOCRDocument = false;
+        let canvas = null;
+        let ctx = null;
+        let currentTextElement = null;
+        let textElements = [];
         
         // Elementos DOM
         const dropArea = document.getElementById('dropArea');
         const fileInput = document.getElementById('fileInput');
         const selectFilesBtn = document.getElementById('selectFiles');
-        const pdfViewer = document.getElementById('pdfViewer');
         const mergeBtn = document.getElementById('mergeBtn');
         const resetBtn = document.getElementById('resetBtn');
+        const addTextBtn = document.getElementById('addTextBtn');
+        const editTextBtn = document.getElementById('editTextBtn');
+        const deleteTextBtn = document.getElementById('deleteTextBtn');
         const boldBtn = document.getElementById('boldBtn');
         const italicBtn = document.getElementById('italicBtn');
         const underlineBtn = document.getElementById('underlineBtn');
+        const fontSizeSelect = document.getElementById('fontSize');
+        const fontFamilySelect = document.getElementById('fontFamily');
+        const textColorInput = document.getElementById('textColor');
+        const alignLeftBtn = document.getElementById('alignLeftBtn');
+        const alignCenterBtn = document.getElementById('alignCenterBtn');
+        const alignRightBtn = document.getElementById('alignRightBtn');
         const addImageBtn = document.getElementById('addImageBtn');
         const imageInput = document.getElementById('imageInput');
         const saveBtn = document.getElementById('saveBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const docInfo = document.getElementById('docInfo');
         const docType = document.getElementById('docType');
+        const pageInfo = document.getElementById('pageInfo');
         const progressModal = document.getElementById('progressModal');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
+        const progressMessage = document.getElementById('progressMessage');
+        const pdfCanvas = document.getElementById('pdf-canvas');
+        const textEditor = document.getElementById('text-editor');
+        const textEditorArea = document.getElementById('text-editor-area');
+        const textEditorSave = document.getElementById('text-editor-save');
+        const textEditorCancel = document.getElementById('text-editor-cancel');
         
         // Configuración de PDF.js
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js';
+        
+        // Inicializar canvas
+        function initCanvas() {
+            canvas = pdfCanvas;
+            ctx = canvas.getContext('2d');
+        }
         
         // Event Listeners
         selectFilesBtn.addEventListener('click', () => fileInput.click());
@@ -381,13 +483,27 @@
         dropArea.addEventListener('drop', handleFileDrop);
         resetBtn.addEventListener('click', resetApp);
         mergeBtn.addEventListener('click', mergePDFs);
+        addTextBtn.addEventListener('click', addText);
+        editTextBtn.addEventListener('click', enableTextEditing);
+        deleteTextBtn.addEventListener('click', deleteText);
         boldBtn.addEventListener('click', applyBold);
         italicBtn.addEventListener('click', applyItalic);
         underlineBtn.addEventListener('click', applyUnderline);
+        fontSizeSelect.addEventListener('change', updateTextStyle);
+        fontFamilySelect.addEventListener('change', updateTextStyle);
+        textColorInput.addEventListener('change', updateTextStyle);
+        alignLeftBtn.addEventListener('click', () => setTextAlignment('left'));
+        alignCenterBtn.addEventListener('click', () => setTextAlignment('center'));
+        alignRightBtn.addEventListener('click', () => setTextAlignment('right'));
         addImageBtn.addEventListener('click', () => imageInput.click());
         imageInput.addEventListener('change', addImageToPDF);
         saveBtn.addEventListener('click', saveChanges);
         downloadBtn.addEventListener('click', downloadPDF);
+        textEditorSave.addEventListener('click', saveTextEdit);
+        textEditorCancel.addEventListener('click', cancelTextEdit);
+        
+        // Inicializar la aplicación
+        initCanvas();
         
         // Funciones para manejar archivos
         function handleFileSelect(e) {
@@ -414,139 +530,228 @@
             }
             
             // Mostrar modal de progreso
-            progressModal.style.display = 'flex';
+            showProgressModal("Cargando documento...");
             
-            // Procesar cada archivo PDF
-            pdfFiles.forEach((file, index) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const typedarray = new Uint8Array(e.target.result);
+            // Procesar el primer archivo PDF (para simplificar)
+            const file = pdfFiles[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const typedarray = new Uint8Array(e.target.result);
+                
+                // Cargar el PDF con PDF.js
+                pdfjsLib.getDocument(typedarray).promise.then(pdf => {
+                    currentPdf = pdf;
+                    pdfDocs = [pdf];
                     
-                    // Cargar el PDF con PDF.js
-                    pdfjsLib.getDocument(typedarray).promise.then(pdf => {
-                        pdfDocs.push(pdf);
+                    // Detectar tipo de documento (digital o escaneado)
+                    detectDocumentType(pdf).then(isOCR => {
+                        isOCRDocument = isOCR;
+                        docType.textContent = `Tipo: ${isOCR ? 'Escaneado (OCR)' : 'Digital'}`;
                         
-                        // Detectar tipo de documento (digital o escaneado)
-                        detectDocumentType(pdf).then(isOCR => {
-                            isOCRDocument = isOCR;
-                            docType.textContent = `Tipo: ${isOCR ? 'Escaneado (OCR)' : 'Digital'}`;
-                            
-                            // Renderizar el PDF
-                            renderPDF(pdf);
-                            
-                            // Actualizar información del documento
-                            docInfo.textContent = `Documentos cargados: ${pdfDocs.length} - Páginas: ${pdf.numPages}`;
-                            
-                            // Habilitar botones
-                            mergeBtn.disabled = pdfDocs.length < 2;
-                            resetBtn.disabled = false;
-                            
-                            // Ocultar modal de progreso
-                            progressModal.style.display = 'none';
-                        });
-                    }).catch(error => {
-                        console.error('Error al cargar el PDF:', error);
-                        progressModal.style.display = 'none';
-                        alert('Error al cargar el PDF. Asegúrate de que es un archivo válido.');
+                        // Renderizar la primera página
+                        renderPage(1);
+                        
+                        // Actualizar información del documento
+                        docInfo.textContent = `Documento: ${file.name}`;
+                        pageInfo.textContent = `Página: 1/${pdf.numPages}`;
+                        
+                        // Habilitar botones
+                        mergeBtn.disabled = pdfDocs.length < 2;
+                        resetBtn.disabled = false;
+                        
+                        // Ocultar modal de progreso
+                        hideProgressModal();
                     });
-                };
-                reader.readAsArrayBuffer(file);
-            });
+                }).catch(error => {
+                    console.error('Error al cargar el PDF:', error);
+                    hideProgressModal();
+                    alert('Error al cargar el PDF. Asegúrate de que es un archivo válido.');
+                });
+            };
+            reader.readAsArrayBuffer(file);
         }
         
         // Función para detectar el tipo de documento (digital o escaneado)
         async function detectDocumentType(pdf) {
-            // Obtener la primera página
-            const page = await pdf.getPage(1);
-            const textContent = await page.getTextContent();
-            
-            // Si el PDF tiene texto selectable, es probablemente digital
-            if (textContent.items.length > 0 && textContent.items.some(item => item.str.trim().length > 0)) {
-                return false; // Documento digital
+            try {
+                // Obtener la primera página
+                const page = await pdf.getPage(1);
+                const textContent = await page.getTextContent();
+                
+                // Si el PDF tiene texto selectable, es probablemente digital
+                if (textContent.items.length > 0 && textContent.items.some(item => item.str.trim().length > 0)) {
+                    return false; // Documento digital
+                }
+                
+                // Si no tiene texto, es probablemente un documento escaneado
+                updateProgress(50, "Documento sin texto detectable, puede ser un escaneo...");
+                
+                // Simulamos el proceso de detección
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                updateProgress(100, "Detección completada");
+                
+                return true; // Documento escaneado (probablemente)
+            } catch (error) {
+                console.error("Error detectando tipo de documento:", error);
+                return false;
             }
-            
-            // Si no tiene texto, es probablemente un documento escaneado
-            // En una aplicación real, aquí usarías Tesseract.js para OCR
-            // Por simplicidad, en este ejemplo asumimos que es escaneado si no tiene texto
-            updateProgress(50, "Documento sin texto detectable, aplicando OCR...");
-            
-            // Simulamos el proceso de OCR
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            updateProgress(100, "OCR completado");
-            
-            return true; // Documento escaneado (requiere OCR)
         }
         
-        function updateProgress(percent, message) {
-            progressBar.style.width = `${percent}%`;
-            progressText.textContent = `${percent}% - ${message}`;
-        }
-        
-        // Función para renderizar el PDF
-        function renderPDF(pdf) {
-            pdfViewer.innerHTML = '';
-            currentPDF = pdf;
+        // Función para renderizar una página del PDF
+        function renderPage(pageNum) {
+            if (!currentPdf) return;
             
-            for (let i = 1; i <= pdf.numPages; i++) {
-                pdf.getPage(i).then(page => {
-                    const viewport = page.getViewport({ scale: 1.5 });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+            showProgressModal("Cargando página...");
+            
+            currentPdf.getPage(pageNum).then(page => {
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext).promise.then(() => {
+                    currentPageNum = pageNum;
+                    pageInfo.textContent = `Página: ${pageNum}/${currentPdf.numPages}`;
+                    hideProgressModal();
                     
-                    const renderContext = {
-                        canvasContext: context,
-                        viewport: viewport
-                    };
-                    
-                    page.render(renderContext).promise.then(() => {
-                        const pageDiv = document.createElement('div');
-                        pageDiv.className = 'pdf-page';
-                        pageDiv.appendChild(canvas);
-                        pdfViewer.appendChild(pageDiv);
-                        
-                        // Si es un documento con OCR, hacer el texto seleccionable
-                        if (isOCRDocument) {
-                            // En una aplicación real, aquí superpondrías el texto OCR
-                            // Para este ejemplo, añadimos un placeholder
-                            const textLayer = document.createElement('div');
-                            textLayer.className = 'text-layer';
-                            textLayer.style.position = 'absolute';
-                            textLayer.style.top = '0';
-                            textLayer.style.left = '0';
-                            textLayer.style.width = '100%';
-                            textLayer.style.height = '100%';
-                            textLayer.innerHTML = '<p style="color: rgba(0,0,0,0.5); padding: 10px;">Texto OCR disponible para edición</p>';
-                            pageDiv.appendChild(textLayer);
-                        }
-                    });
+                    // Si es un documento con OCR, intentar extraer texto
+                    if (isOCRDocument) {
+                        // En una aplicación real, aquí procesarías con OCR
+                        // Por ahora, solo mostramos un mensaje
+                        console.log("Este documento parece ser un escaneo. El texto no es seleccionable.");
+                    }
                 });
-            }
+            });
         }
         
         // Funciones de edición de texto
+        function addText() {
+            const text = prompt("Introduce el texto que deseas agregar:", "Nuevo texto");
+            if (text) {
+                // Crear un nuevo elemento de texto
+                const textElement = {
+                    id: Date.now(),
+                    text: text,
+                    x: 50,
+                    y: 50,
+                    fontSize: parseInt(fontSizeSelect.value),
+                    fontFamily: fontFamilySelect.value,
+                    color: textColorInput.value,
+                    bold: false,
+                    italic: false,
+                    underline: false,
+                    alignment: 'left'
+                };
+                
+                textElements.push(textElement);
+                renderTextElements();
+            }
+        }
+        
+        function enableTextEditing() {
+            alert("Modo edición de texto activado. Haz clic en el texto que deseas editar.");
+            canvas.style.cursor = "text";
+            
+            // En una aplicación real, aquí implementarías la detección de clics en elementos de texto
+        }
+        
+        function deleteText() {
+            alert("Modo eliminación de texto activado. Haz clic en el texto que deseas eliminar.");
+            canvas.style.cursor = "not-allowed";
+            
+            // En una aplicación real, aquí implementarías la eliminación de texto
+        }
+        
         function applyBold() {
-            if (selectedText) {
-                selectedText.classList.toggle('bold');
+            if (currentTextElement) {
+                currentTextElement.bold = !currentTextElement.bold;
+                renderTextElements();
             } else {
                 alert('Selecciona texto para aplicar negrita.');
             }
         }
         
         function applyItalic() {
-            if (selectedText) {
-                selectedText.classList.toggle('italic');
+            if (currentTextElement) {
+                currentTextElement.italic = !currentTextElement.italic;
+                renderTextElements();
             } else {
                 alert('Selecciona texto para aplicar cursiva.');
             }
         }
         
         function applyUnderline() {
-            if (selectedText) {
-                selectedText.classList.toggle('underline');
+            if (currentTextElement) {
+                currentTextElement.underline = !currentTextElement.underline;
+                renderTextElements();
             } else {
                 alert('Selecciona texto para aplicar subrayado.');
+            }
+        }
+        
+        function updateTextStyle() {
+            if (currentTextElement) {
+                currentTextElement.fontSize = parseInt(fontSizeSelect.value);
+                currentTextElement.fontFamily = fontFamilySelect.value;
+                currentTextElement.color = textColorInput.value;
+                renderTextElements();
+            }
+        }
+        
+        function setTextAlignment(alignment) {
+            if (currentTextElement) {
+                currentTextElement.alignment = alignment;
+                renderTextElements();
+            }
+        }
+        
+        function renderTextElements() {
+            // Limpiar el canvas
+            if (currentPdf) {
+                renderPage(currentPageNum);
+            }
+            
+            // Volver a dibujar todos los elementos de texto
+            textElements.forEach(element => {
+                drawTextElement(element);
+            });
+        }
+        
+        function drawTextElement(element) {
+            ctx.font = `${element.bold ? 'bold ' : ''}${element.italic ? 'italic ' : ''}${element.fontSize}px ${element.fontFamily}`;
+            ctx.fillStyle = element.color;
+            ctx.textAlign = element.alignment;
+            
+            // Calcular la posición x según la alineación
+            let x = element.x;
+            if (element.alignment === 'center') {
+                x = canvas.width / 2;
+            } else if (element.alignment === 'right') {
+                x = canvas.width - element.x;
+            }
+            
+            ctx.fillText(element.text, x, element.y);
+            
+            // Dibujar subrayado si es necesario
+            if (element.underline) {
+                const textWidth = ctx.measureText(element.text).width;
+                let lineX = x;
+                if (element.alignment === 'center') {
+                    lineX = x - textWidth / 2;
+                } else if (element.alignment === 'right') {
+                    lineX = x - textWidth;
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(lineX, element.y + 2);
+                ctx.lineTo(lineX + textWidth, element.y + 2);
+                ctx.strokeStyle = element.color;
+                ctx.stroke();
             }
         }
         
@@ -560,93 +765,102 @@
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = function() {
-                    // Crear un elemento de imagen superpuesto
-                    const imgElement = document.createElement('img');
-                    imgElement.src = img.src;
-                    imgElement.style.position = 'absolute';
-                    imgElement.style.top = '50px';
-                    imgElement.style.left = '50px';
-                    imgElement.style.maxWidth = '200px';
-                    imgElement.style.maxHeight = '200px';
-                    imgElement.style.cursor = 'move';
-                    imgElement.style.zIndex = '100';
-                    imgElement.draggable = true;
+                    // Dibujar la imagen en el canvas
+                    ctx.drawImage(img, 50, 50, 200, 200 * (img.height / img.width));
                     
-                    // Añadir la imagen al visor de PDF
-                    const firstPage = document.querySelector('.pdf-page');
-                    if (firstPage) {
-                        firstPage.appendChild(imgElement);
-                        
-                        // Hacer la imagen arrastrable
-                        makeDraggable(imgElement);
-                    }
+                    // En una aplicación real, guardarías la referencia a la imagen
+                    alert("Imagen agregada. En una aplicación real, se guardaría la posición y tamaño.");
                 };
             };
             reader.readAsDataURL(file);
         }
         
-        function makeDraggable(element) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            element.onmousedown = dragMouseDown;
-            
-            function dragMouseDown(e) {
-                e.preventDefault();
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-            
-            function elementDrag(e) {
-                e.preventDefault();
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                element.style.top = (element.offsetTop - pos2) + "px";
-                element.style.left = (element.offsetLeft - pos1) + "px";
-            }
-            
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
-        }
-        
         // Función para fusionar PDFs
         function mergePDFs() {
-            alert('Función de fusión de PDFs se ejecutaría aquí. En una aplicación real, usarías una biblioteca como pdf-lib.');
+            alert('Función de fusión de PDFs se ejecutaría aquí. En una aplicación real, usarías pdf-lib para fusionar los PDFs.');
             // En una implementación real, usarías pdf-lib para fusionar los PDFs
         }
         
         // Función para guardar cambios
         function saveChanges() {
-            alert('Cambios guardados (simulado). En una aplicación real, se guardarían las modificaciones.');
+            showProgressModal("Guardando cambios...");
+            
+            // Simular proceso de guardado
+            setTimeout(() => {
+                hideProgressModal();
+                alert('Cambios guardados correctamente.');
+            }, 1500);
         }
         
         // Función para descargar PDF
         function downloadPDF() {
-            alert('Descargando PDF (simulado). En una aplicación real, se generaría el PDF modificado.');
+            showProgressModal("Generando PDF para descarga...");
+            
+            // Simular proceso de generación de PDF
+            setTimeout(() => {
+                hideProgressModal();
+                
+                // Crear un enlace de descarga
+                const link = document.createElement('a');
+                link.href = canvas.toDataURL('image/png');
+                link.download = 'documento_editado.pdf';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('PDF descargado. En una aplicación real, se generaría un PDF con todo el contenido.');
+            }, 2000);
         }
         
         // Función para reiniciar la aplicación
         function resetApp() {
-            pdfViewer.innerHTML = '<p class="document-info">Carga un documento PDF para comenzar a editarlo.</p>';
-            pdfDocs = [];
-            currentPDF = null;
-            docInfo.textContent = 'No hay documentos cargados';
-            docType.textContent = 'Tipo: Desconocido';
-            mergeBtn.disabled = true;
-            resetBtn.disabled = true;
+            if (confirm("¿Estás seguro de que deseas reiniciar? Se perderán todos los cambios.")) {
+                canvas.width = 0;
+                canvas.height = 0;
+                currentPdf = null;
+                pdfDocs = [];
+                textElements = [];
+                currentTextElement = null;
+                docInfo.textContent = 'No hay documentos cargados';
+                docType.textContent = 'Tipo: Desconocido';
+                pageInfo.textContent = 'Página: 0/0';
+                mergeBtn.disabled = true;
+                resetBtn.disabled = true;
+            }
         }
         
-        // Hacer el texto seleccionable y mostrar opciones de formato
-        document.addEventListener('selectionchange', () => {
-            const selection = window.getSelection();
-            if (selection.toString().trim() !== '') {
-                selectedText = selection.anchorNode.parentNode;
+        // Funciones para el modal de progreso
+        function showProgressModal(message) {
+            progressMessage.textContent = message;
+            progressModal.style.display = 'flex';
+        }
+        
+        function hideProgressModal() {
+            progressModal.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+        }
+        
+        function updateProgress(percent, message) {
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = `${percent}%`;
+            if (message) {
+                progressMessage.textContent = message;
             }
-        });
+        }
+        
+        // Funciones para el editor de texto
+        function saveTextEdit() {
+            if (currentTextElement) {
+                currentTextElement.text = textEditorArea.value;
+                renderTextElements();
+            }
+            textEditor.style.display = 'none';
+        }
+        
+        function cancelTextEdit() {
+            textEditor.style.display = 'none';
+        }
     </script>
 </body>
 </html>
